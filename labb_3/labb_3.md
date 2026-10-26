@@ -1,24 +1,27 @@
-# lab 3
+# Lab 3
 
 Use docker compose to create an image and a compose of a worker and a master and a network.
 ```
 docker compose up -d --build
 ```
 
-Start a listener to port 9999.
+Start a netcat listener to port 9999.
 ```
 docker compose exec master nc -lk 9999
 ```
 
 Submit the job to the master.
 ```
-docker compose exec master /opt/spark/bin/spark-submit --master spark://master:7077 /opt/spark/work-dir/stream.py
+docker compose exec master /opt/spark/bin/spark-submit --master spark://master:7077 /opt/spark/work-dir/task_x.py
 ```
-
 
 
 ## Task 1
 
+### Screenshots
+![task_1](./proof/task_1.png)
+
+### Code
 ```(python)
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import udf
@@ -55,6 +58,12 @@ query.awaitTermination()
 ```
 
 ## Task 2
+
+### Screenshots
+![task 2 input](./proof/task_2_input.png)
+![task_2](./proof/task_2.png)
+
+### Code
 ```(python)
 from pyspark.sql import SparkSession
 
@@ -83,6 +92,12 @@ query.awaitTermination()
 ```
 
 ## Task 3
+
+### Screenshots
+![task 3 input](./proof/task_3_input.png)
+![task_3](./proof/task_3.png)
+
+### Code
 ```(python)
 from pyspark.sql import SparkSession
 
@@ -116,6 +131,12 @@ query.awaitTermination()
 
 
 ## Task 4
+
+### Screenshots
+![task 4 input](./proof/task_4_input.png)
+![task_4](./proof/task_4.png)
+
+### Code
 ```(python)
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import explode, split
@@ -142,4 +163,45 @@ query = salesPerProduct \
     .start()
 
 query.awaitTermination()
+```
+
+## Dockerfile and compose.yaml
+Dockerfile.
+```
+FROM apache/spark:python3
+
+USER root
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends netcat-openbsd \
+ && rm -rf /var/lib/apt/lists/* 
+USER spark
+
+WORKDIR /opt/spark/work-dir
+```
+compose.yaml
+```
+services:
+  master:
+    image: spark-lab
+    build: .
+    hostname: master
+    environment:
+      - SPARK_MASTER_HOST=master
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+    ports:
+      - "8080:8080"
+      - "7077:7077"
+    volumes:
+      - ./app:/opt/spark/work-dir
+
+  worker:
+    image: spark-lab
+    depends_on:
+      - master
+    environment:
+      - SPARK_WORKER_CORES=2
+      - SPARK_WORKER_MEMORY=1g
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://master:7077
+    volumes:
+      - ./app:/opt/spark/work-dir
 ```
