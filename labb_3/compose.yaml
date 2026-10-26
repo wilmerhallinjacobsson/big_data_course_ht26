@@ -1,0 +1,24 @@
+services:
+  master:
+    image: spark-lab
+    build: .
+    hostname: master
+    environment:
+      - SPARK_MASTER_HOST=master
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+    ports:
+      - "8080:8080"   # Spark Master web UI
+      - "7077:7077"
+    volumes:
+      - ./app:/opt/spark/work-dir
+
+  worker:
+    image: spark-lab
+    depends_on:
+      - master
+    environment:
+      - SPARK_WORKER_CORES=2
+      - SPARK_WORKER_MEMORY=1g
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://master:7077
+    volumes:
+      - ./app:/opt/spark/work-dir
